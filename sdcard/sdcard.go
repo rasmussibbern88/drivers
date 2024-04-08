@@ -34,7 +34,7 @@ var (
 )
 
 type Device struct {
-	bus        *machine.SWSPI
+	bus        machine.SWSPI
 	sck        machine.Pin
 	sdo        machine.Pin
 	sdi        machine.Pin
