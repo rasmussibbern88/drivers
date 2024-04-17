@@ -68,19 +68,19 @@ func (s *Session) GetAppSKey() string {
 }
 
 // GenMessage generates an uplink message.
-func (s *Session) GenMessage(dir uint8, payload []uint8) ([]uint8, error) {
+func (s *Session) GenMessage(dir, fport uint8, payload []uint8) ([]uint8, error) {
 	var buf []uint8
 	buf = append(buf, 0b01000000) // FHDR Unconfirmed up
 	buf = append(buf, s.DevAddr[:]...)
 
 	// FCtl : No ADR, No RFU, No ACK, No FPending, No FOpt
-	buf = append(buf, 0x00)
+	buf = append(buf, 0x80)
 
 	// FCnt Up
 	buf = append(buf, uint8(s.FCntUp&0xFF), uint8((s.FCntUp>>8)&0xFF))
 
 	// FPort=1
-	buf = append(buf, 0x01)
+	buf = append(buf, fport)
 
 	fCnt := uint32(0)
 	if dir == 0 {
@@ -89,7 +89,7 @@ func (s *Session) GenMessage(dir uint8, payload []uint8) ([]uint8, error) {
 	} else {
 		fCnt = s.FCntDown
 	}
-	data, err := s.genFRMPayload(dir, fCnt, payload, false)
+	data, err := s.genFRMPayload(dir, fport, fCnt, payload, false)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (s *Session) GenMessage(dir uint8, payload []uint8) ([]uint8, error) {
 	return buf, nil
 }
 
-func (s *Session) genFRMPayload(dir uint8, fCnt uint32, payload []byte, isFOpts bool) ([]byte, error) {
+func (s *Session) genFRMPayload(dir, fport uint8, fCnt uint32, payload []byte, isFOpts bool) ([]byte, error) {
 	k := len(payload) / aes.BlockSize
 	if len(payload)%aes.BlockSize != 0 {
 		k++
@@ -113,6 +113,12 @@ func (s *Session) genFRMPayload(dir uint8, fCnt uint32, payload []byte, isFOpts 
 	cipher, err := aes.NewCipher(s.AppSKey[:])
 	if err != nil {
 		panic(err)
+	}
+	if fport == 0 {
+		cipher, err = aes.NewCipher(s.NwkSKey[:])
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	var a [aes.BlockSize]byte

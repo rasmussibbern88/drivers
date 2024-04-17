@@ -39,5 +39,11 @@ func EU868() *SettingsEU868 {
 			lora.CodingRate4_5,
 			EU868_DEFAULT_PREAMBLE_LEN,
 			EU868_DEFAULT_TX_POWER_DBM}},
+		rx2Channel: &ChannelEU{channel: channel{lora.MHz_868_5,
+			lora.Bandwidth_125_0,
+			lora.SpreadingFactor12,
+			lora.CodingRate4_5,
+			EU868_DEFAULT_PREAMBLE_LEN,
+			EU868_DEFAULT_TX_POWER_DBM}},
 	}}
 }

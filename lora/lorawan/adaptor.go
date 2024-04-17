@@ -115,22 +115,22 @@ func Join(otaa *Otaa, session *Session) error {
 		return err
 	}
 
+	applyChannelConfig(regionSettings.UplinkChannel()) // JUST STUPID...
 	return nil
 }
 
 // SendUplink sends Lorawan Uplink message
 func SendUplink(data []uint8, session *Session) error {
-
 	if regionSettings == nil {
 		return ErrUndefinedRegionSettings
 	}
 
-	payload, err := session.GenMessage(0, []byte(data))
+	payload, err := session.GenMessage(0, 0x01, []byte(data))
 	if err != nil {
 		return err
 	}
 
-	applyChannelConfig(regionSettings.UplinkChannel())
+	// applyChannelConfig(regionSettings.UplinkChannel())
 	ActiveRadio.SetIqMode(lora.IQStandard)
 	ActiveRadio.Tx(payload, LORA_TX_TIMEOUT)
 	if err != nil {
@@ -139,6 +139,49 @@ func SendUplink(data []uint8, session *Session) error {
 	return nil
 }
 
-func ListenDownlink() error {
+// SendUplink sends Lorawan Uplink message //Small change in GenMassage -> might be better to fix elsewhere.
+func SendUplinkMac(data []uint8, session *Session) error {
+	if regionSettings == nil {
+		return ErrUndefinedRegionSettings
+	}
+
+	// Need to build the correct payload and calculate the mic...
+
+	payload, err := session.GenMessage(0, 0x00, []byte(data))
+	if err != nil {
+		return err
+	}
+
+	// applyChannelConfig(regionSettings.UplinkChannel())
+	ActiveRadio.SetIqMode(lora.IQStandard)
+	ActiveRadio.Tx(payload, LORA_TX_TIMEOUT)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+// Listen downlink, window 1 for RX1 window config (uplink), everything else is RX2 window config (worstcase)
+func ListenDownlink(window int) ([]uint8, error) {
+	if regionSettings == nil {
+		return nil, ErrUndefinedRegionSettings
+	}
+
+	if window == 1 {
+		// applyChannelConfig(regionSettings.UplinkChannel())
+		ActiveRadio.SetIqMode(lora.IQInverted)
+		resp, err := ActiveRadio.Rx(LORA_RX_TIMEOUT)
+		if err == nil && resp != nil {
+			return resp, nil
+		}
+	} else {
+		// applyChannelConfig(regionSettings.Rx2Channel()) //TODO Fix this channel and reset the normal one after...
+		ActiveRadio.SetIqMode(lora.IQInverted)
+		resp, err := ActiveRadio.Rx(LORA_RX_TIMEOUT)
+		if err == nil && resp != nil {
+			return resp, nil
+		}
+	}
+
+	return nil, nil
 }

@@ -14,6 +14,10 @@ func genPayloadMIC(payload []uint8, key [16]uint8) [4]uint8 {
 	return mic
 }
 
+func GenPayloadMIC(payload []uint8, key [16]uint8) [4]uint8 {
+	return genPayloadMIC(payload, key)
+}
+
 func calcMessageMIC(payload []uint8, key [16]uint8, dir uint8, addr []byte, fCnt uint32, lenMessage uint8) [4]uint8 {
 	var b0 []byte
 	b0 = append(b0, 0x49, 0x00, 0x00, 0x00, 0x00)
