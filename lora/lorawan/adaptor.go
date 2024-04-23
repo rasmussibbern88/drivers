@@ -64,6 +64,10 @@ func applyChannelConfig(ch region.Channel) {
 	ActiveRadio.SetCrc(true)
 }
 
+func ApplyDefaultUpChannelConfig() {
+	applyChannelConfig(regionSettings.UplinkChannel())
+}
+
 // Join tries to connect Lorawan Gateway
 func Join(otaa *Otaa, session *Session) error {
 	var resp []uint8
