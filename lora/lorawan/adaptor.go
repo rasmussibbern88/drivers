@@ -132,7 +132,7 @@ func SendUplink(data []uint8, session *Session) error {
 
 	// applyChannelConfig(regionSettings.UplinkChannel())
 	ActiveRadio.SetIqMode(lora.IQStandard)
-	ActiveRadio.Tx(payload, LORA_TX_TIMEOUT)
+	err = ActiveRadio.Tx(payload, LORA_TX_TIMEOUT)
 	if err != nil {
 		return err
 	}

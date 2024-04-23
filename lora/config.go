@@ -17,9 +17,7 @@ type Config struct {
 	LoraTxPowerDBm int8   // Tx power in Dbm
 }
 
-var (
-	ErrUndefinedLoraConf = errors.New("Undefined Lora configuration")
-)
+var ErrUndefinedLoraConf = errors.New("Undefined Lora configuration")
 
 const (
 	SpreadingFactor5  = 0x05
@@ -80,6 +78,7 @@ const (
 const (
 	MHz_868_1 = 868100000
 	MHz_868_5 = 868500000
+	MHz_689_5 = 689525000
 	MHz_902_3 = 902300000
 	Mhz_903_0 = 903000000
 	MHZ_915_0 = 915000000
