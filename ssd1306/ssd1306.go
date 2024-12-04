@@ -11,6 +11,12 @@ import (
 
 	"tinygo.org/x/drivers"
 	"tinygo.org/x/drivers/internal/legacy"
+	"tinygo.org/x/drivers/pixel"
+)
+
+var (
+	errBufferSize = errors.New("invalid size buffer")
+	errOutOfRange = errors.New("out of screen range")
 )
 
 type ResetValue [2]byte
@@ -26,6 +32,7 @@ type Device struct {
 	canReset   bool
 	resetCol   ResetValue
 	resetPage  ResetValue
+	rotation   drivers.Rotation
 }
 
 // Config is the configuration for the display
@@ -41,6 +48,7 @@ type Config struct {
 	// If you're using a different size, you might need to set these values manually.
 	ResetCol  ResetValue
 	ResetPage ResetValue
+	Rotation  drivers.Rotation
 }
 
 type I2CBus struct {
@@ -142,8 +150,8 @@ func (d *Device) Configure(cfg Config) {
 	}
 	d.Command(MEMORYMODE)
 	d.Command(0x00)
-	d.Command(SEGREMAP | 0x1)
-	d.Command(COMSCANDEC)
+
+	d.SetRotation(cfg.Rotation)
 
 	if (d.width == 128 && d.height == 64) || (d.width == 64 && d.height == 48) { // 128x64 or 64x48
 		d.Command(SETCOMPINS)
@@ -245,8 +253,7 @@ func (d *Device) GetPixel(x int16, y int16) bool {
 // SetBuffer changes the whole buffer at once
 func (d *Device) SetBuffer(buffer []byte) error {
 	if int16(len(buffer)) != d.bufferSize {
-		//return ErrBuffer
-		return errors.New("wrong size buffer")
+		return errBufferSize
 	}
 	for i := int16(0); i < d.bufferSize; i++ {
 		d.buffer[i] = buffer[i]
@@ -337,4 +344,83 @@ func (b *SPIBus) tx(data []byte, isCommand bool) error {
 // Size returns the current size of the display.
 func (d *Device) Size() (w, h int16) {
 	return d.width, d.height
+}
+
+// DrawBitmap copies the bitmap to the screen at the given coordinates.
+func (d *Device) DrawBitmap(x, y int16, bitmap pixel.Image[pixel.Monochrome]) error {
+	width, height := bitmap.Size()
+	if x < 0 || x+int16(width) > d.width || y < 0 || y+int16(height) > d.height {
+		return errOutOfRange
+	}
+
+	for i := 0; i < width; i++ {
+		for j := 0; j < height; j++ {
+			d.SetPixel(x+int16(i), y+int16(j), bitmap.Get(i, j).RGBA())
+		}
+	}
+
+	return nil
+}
+
+// Rotation returns the currently configured rotation.
+func (d *Device) Rotation() drivers.Rotation {
+	return d.rotation
+}
+
+// SetRotation changes the rotation of the device (clock-wise).
+func (d *Device) SetRotation(rotation drivers.Rotation) error {
+	d.rotation = rotation
+	switch d.rotation {
+	case drivers.Rotation0:
+		d.Command(SEGREMAP | 0x1) // Reverse horizontal mapping
+		d.Command(COMSCANDEC)     // Reverse vertical mapping
+	case drivers.Rotation180:
+		d.Command(SEGREMAP)   // Normal horizontal mapping
+		d.Command(COMSCANINC) // Normal vertical mapping
+	// nothing to do
+	default:
+		d.Command(SEGREMAP | 0x1) // Reverse horizontal mapping
+		d.Command(COMSCANDEC)     // Reverse vertical mapping
+	}
+	return nil
+}
+
+// Set the sleep mode for this display. When sleeping, the panel uses a lot
+// less power. The display won't show an image anymore, but the memory contents
+// should be kept.
+func (d *Device) Sleep(sleepEnabled bool) error {
+	if sleepEnabled {
+		d.Command(DISPLAYOFF)
+	} else {
+		d.Command(DISPLAYON)
+	}
+	return nil
+}
+
+// FillRectangle fills a rectangle at a given coordinates with a color
+func (d *Device) FillRectangle(x, y, width, height int16, c color.RGBA) error {
+	dw, dh := d.Size()
+
+	if x < 0 || y < 0 || width <= 0 || height <= 0 ||
+		x >= d.width || (x+width) > dw || y >= dh || (y+height) > dh {
+		return errOutOfRange
+	}
+
+	if x+width == dw && y+height == dh && c.R == 0 && c.G == 0 && c.B == 0 {
+		d.ClearDisplay()
+		return nil
+	}
+
+	for i := x; i < x+width; i++ {
+		for j := y; j < y+height; j++ {
+			d.SetPixel(i, j, c)
+		}
+	}
+
+	return nil
+}
+
+// SetScroll sets the vertical scrolling for the display, which is a NOP for this display.
+func (d *Device) SetScroll(line int16) {
+	return
 }
