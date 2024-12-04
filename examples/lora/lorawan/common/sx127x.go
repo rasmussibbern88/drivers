@@ -1,4 +1,4 @@
-//go:build featherwing || lgt92
+//go:build featherwing || lgt92 || sx127x
 
 package common
 
@@ -26,7 +26,7 @@ func SetupLora() (lora.Radio, error) {
 	rstPin.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	spi.Configure(machine.SPIConfig{Frequency: 500000, Mode: 0})
 
-	loraRadio = sx127x.New(spi, rstPin)
+	loraRadio = sx127x.New(*spi, rstPin)
 	loraRadio.SetRadioController(sx127x.NewRadioControl(csPin, dio0Pin, dio1Pin))
 	loraRadio.Reset()
 
