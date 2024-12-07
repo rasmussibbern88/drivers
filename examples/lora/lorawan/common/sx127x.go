@@ -23,10 +23,13 @@ var (
 
 // do sx127x setup here
 func SetupLora() (lora.Radio, error) {
+	if spi == nil {
+		return nil, errSPINotFound
+	}
 	rstPin.Configure(machine.PinConfig{Mode: machine.PinOutput})
-	spi.Configure(machine.SPIConfig{Frequency: 500000, Mode: 0})
+	//spi.Configure(machine.SPIConfig{Frequency: 500000, Mode: 0, SCK: machine.SCK, MOSI: machine.MOSI, MISO: machine.MISO})
 
-	loraRadio = sx127x.New(*spi, rstPin)
+	loraRadio = sx127x.New(spi, rstPin)
 	loraRadio.SetRadioController(sx127x.NewRadioControl(csPin, dio0Pin, dio1Pin))
 	loraRadio.Reset()
 
